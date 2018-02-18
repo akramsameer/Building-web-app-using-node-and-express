@@ -21,6 +21,8 @@ bookRouter.route('/single')
         res.send('Hello Single Book...!');
     });
 
+app.use('/Books' , bookRouter);
+
 app.get('/', function (req, res) {
     res.render('index', {
         title: 'Hello from render EJS',
