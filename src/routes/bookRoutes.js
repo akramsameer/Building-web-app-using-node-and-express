@@ -1,89 +1,58 @@
 var express = require('express');
-
+var mongodb = require('mongodb');
 var bookRouter = express.Router();
+var ObjectId = require('mongodb').ObjectID;
 
-var books = [{
-        title: 'War and Peace',
-        genre: 'Historical Fiction',
-        author: 'Lev Nikolayevich Tolstoy',
-        read: false
-    },
-    {
-        title: 'Les Misérables',
-        genre: 'Historical Fiction',
-        author: 'Victor Hugo',
-        read: false
-    },
-    {
-        title: 'The Time Machine',
-        genre: 'Science Fiction',
-        author: 'H. G. Wells',
-        read: false
-    },
-    {
-        title: 'A Journey into the Center of the Earth',
-        genre: 'Science Fiction',
-        author: 'Jules Verne',
-        read: false
-    },
-    {
-        title: 'The Dark World',
-        genre: 'Fantasy',
-        author: 'Henry Kuttner',
-        read: false
-    },
-    {
-        title: 'The Wind in the Willows',
-        genre: 'Fantasy',
-        author: 'Kenneth Grahame',
-        read: false
-    },
-    {
-        title: 'Life On The Mississippi',
-        genre: 'History',
-        author: 'Mark Twain',
-        read: false
-    },
-    {
-        title: 'Childhood',
-        genre: 'Biography',
-        author: 'Lev Nikolayevich Tolstoy',
-        read: false
-    }
-];
-bookRouter.route('/')
-    .get(function (req, res) {
-        res.render('bookListView', {
-            title: 'Books',
-            nav: [{
-                    link: '/Books',
-                    Text: 'Books'
-                },
-                {
-                    link: 'Authors',
-                    Text: 'Authors'
-                }
-            ],
-            books: books
-        });
+var router = function (nav) {
+
+    bookRouter.use(function (req, res, next) {
+        if (!req.user) {
+            res.redirect('/');
+        }
+        next();
     });
 
-bookRouter.route('/:id')
-    .get(function (req, res) {
-        var id = req.params.id;
-        res.render('bookView', {
-            title: 'Book',
-            nav: [{
-                    link: '/Books',
-                    Text: 'Books'
-                },
-                {
-                    link: 'Authors',
-                    Text: 'Authors'
-                }
-            ],
-            book: books[id]
-        });
-    });
+    bookRouter.route('/')
+        .get(function (req, res) {
+            var url = 'mongodb://localhost:27017/libraryApp';
+            mongodb.connect(url, function (err, client) {
+                var db = client.db('libraryApp');
+                var collection = db.collection('books');
 
-module.exports = bookRouter;
+                collection.find({}).toArray(function (err, results) {
+                    res.render('bookListView', {
+                        title: 'Books',
+                        nav: nav,
+                        books: results
+                    });
+                });
+                client.close();
+            });
+        });
+
+    bookRouter.route('/:id')
+        .get(function (req, res) {
+
+            var id = new ObjectId(req.params.id);
+            var url = 'mongodb://localhost:27017/libraryApp';
+
+            mongodb.connect(url, function (err, client) {
+                var db = client.db('libraryApp');
+                var collection = db.collection('books');
+
+                collection.findOne({
+                    _id: id
+                }, function (err, results) {
+                    res.render('bookView', {
+                        title: 'Books',
+                        nav: nav,
+                        book: results
+                    });
+                });
+            });
+        });
+
+    return bookRouter;
+};
+
+module.exports = router;
